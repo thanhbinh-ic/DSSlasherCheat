@@ -56,7 +56,7 @@ static void applyAllCheats() {
         SetSkillCoolHasteSkill(playerDataInstance, str, 100);
     }
 
-    NSLog(@"[DSSlasherCheat] ✅ All cheats applied!");
+    NSLog(@"[DSSlasherCheat] ✅ All cheats applied successfully!");
 }
 
 // ====================== SHOW MENU ======================
@@ -73,7 +73,6 @@ static void showMenu() {
     
     [alert addAction:[UIAlertAction actionWithTitle:@"Đóng" style:UIAlertActionStyleCancel handler:nil]];
     
-    // Get root view controller an toàn
     UIViewController *rootVC = nil;
     UIWindow *window = [[UIApplication sharedApplication] windows].firstObject;
     if (window) rootVC = window.rootViewController;
@@ -126,15 +125,16 @@ static void init_cheat() {
         }
     }
 
-    // Double tap gesture
+    // Double tap để mở menu
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 7 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
         doubleTap.numberOfTapsRequired = 2;
         doubleTap.numberOfTouchesRequired = 1;
         
         UIWindow *window = [[UIApplication sharedApplication] windows].firstObject;
-        if (window) [window addGestureRecognizer:doubleTap];
-        
-        NSLog(@"[DSSlasherCheat] Double tap gesture added");
+        if (window) {
+            [window addGestureRecognizer:doubleTap];
+            NSLog(@"[DSSlasherCheat] Double tap gesture added - Tap 2 lần để mở menu");
+        }
     });
 }
