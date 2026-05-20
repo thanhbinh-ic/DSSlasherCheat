@@ -17,7 +17,6 @@ static il2cpp_string_new_t il2cpp_string_new = NULL;
 
 static void* (*PlayerData_get_Instance)() = NULL;
 
-// Method pointers
 static void (*SetGold)(void* instance, int32_t gold) = NULL;
 static void (*SetMaxHP)(void* instance, int32_t hp, bool heal, int32_t type) = NULL;
 static void (*ApplyDamageReductionBuff)(void* instance, void* id, float reduction, float duration, int32_t stack, bool permanent) = NULL;
@@ -28,17 +27,17 @@ static void (*SetSkillCoolHasteSkill)(void* instance, void* key, int32_t value) 
 
 static void* playerDataInstance = NULL;
 
-// ====================== MENU STATE ======================
+// Menu State
 static BOOL godModeEnabled = YES;
 static BOOL superArmorEnabled = YES;
 static BOOL damageNullifyEnabled = YES;
 static BOOL critEnabled = YES;
 static BOOL cooldownEnabled = YES;
 
-// ====================== FLOATING BUTTON ======================
+// ====================== FLOATING MENU ======================
 @interface FloatingCheatButton : NSObject
 @property (nonatomic, strong) UIButton *button;
-@property (nonatomic, strong) UIWindow *window;
+@property (nonatomic, strong) UIWindow *overlayWindow;
 @end
 
 @implementation FloatingCheatButton
@@ -46,58 +45,63 @@ static BOOL cooldownEnabled = YES;
 - (instancetype)init {
     self = [super init];
     if (self) {
-        [self setupFloatingButton];
+        [self createFloatingUI];
     }
     return self;
 }
 
-- (void)setupFloatingButton {
-    self.window = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height)];
-    self.window.windowLevel = UIWindowLevelAlert + 1;
-    self.window.backgroundColor = [UIColor clearColor];
-    self.window.hidden = NO;
+- (void)createFloatingUI {
+    // Tạo window hỗ trợ scene mới
+    self.overlayWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    self.overlayWindow.windowLevel = UIWindowLevelAlert + 100;
+    self.overlayWindow.backgroundColor = [UIColor clearColor];
+    self.overlayWindow.hidden = NO;
+    
+    if (@available(iOS 13.0, *)) {
+        self.overlayWindow.windowScene = [[UIApplication sharedApplication] connectedScenes].anyObject;
+    }
 
     self.button = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.button.frame = CGRectMake(20, 100, 60, 60);
+    self.button.frame = CGRectMake(30, 150, 65, 65);
     self.button.backgroundColor = [UIColor systemRedColor];
-    self.button.layer.cornerRadius = 30;
+    self.button.layer.cornerRadius = 32.5;
     self.button.clipsToBounds = YES;
-    
     [self.button setTitle:@"⚔️" forState:UIControlStateNormal];
-    self.button.titleLabel.font = [UIFont systemFontOfSize:28];
-    
+    self.button.titleLabel.font = [UIFont systemFontOfSize:32 weight:UIFontWeightBold];
+
     [self.button addTarget:self action:@selector(buttonTapped) forControlEvents:UIControlEventTouchUpInside];
-    
+
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [self.button addGestureRecognizer:pan];
-    
-    [self.window addSubview:self.button];
-    
-    // Auto hide sau 3 giây
-    [self startAutoHideTimer];
+
+    [self.overlayWindow addSubview:self.button];
+    [self startAutoHide];
 }
 
-- (void)startAutoHideTimer {
+- (void)startAutoHide {
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
     [self performSelector:@selector(hideButton) withObject:nil afterDelay:3.0];
 }
 
 - (void)hideButton {
-    self.button.alpha = 0.1;
+    [UIView animateWithDuration:0.3 animations:^{
+        self.button.alpha = 0.15;
+    }];
 }
 
 - (void)showButton {
-    self.button.alpha = 1.0;
-    [self startAutoHideTimer];
+    [UIView animateWithDuration:0.3 animations:^{
+        self.button.alpha = 1.0;
+    }];
+    [self startAutoHide];
 }
 
 - (void)handlePan:(UIPanGestureRecognizer *)gesture {
-    CGPoint translation = [gesture translationInView:self.button.superview];
+    CGPoint translation = [gesture translationInView:gesture.view];
     CGPoint newCenter = CGPointMake(gesture.view.center.x + translation.x, gesture.view.center.y + translation.y);
-    
     gesture.view.center = newCenter;
-    [gesture setTranslation:CGPointZero inView:self.button.superview];
-    
+    [gesture setTranslation:CGPointZero inView:gesture.view];
+
     if (gesture.state == UIGestureRecognizerStateEnded) {
         [self showButton];
     }
@@ -109,60 +113,53 @@ static BOOL cooldownEnabled = YES;
 }
 
 - (void)showMenu {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Dungeon Slasher Cheat"
-                                                                   message:@"Chọn chức năng"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Dungeon Slasher Cheat Menu"
+                                                                   message:@"Bật/Tắt chức năng"
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
-    [alert addAction:[UIAlertAction actionWithTitle:godModeEnabled ? @"✅ God Mode (ON)" : @"God Mode" 
-                                              style:UIAlertActionStyleDefault 
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        godModeEnabled = !godModeEnabled;
-        [self applyCheats];
+    [alert addAction:[UIAlertAction actionWithTitle:godModeEnabled ? @"✅ God Mode" : @"God Mode" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        godModeEnabled = !godModeEnabled; [self applyAllCheats];
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:superArmorEnabled ? @"✅ Super Armor (ON)" : @"Super Armor" 
-                                              style:UIAlertActionStyleDefault 
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        superArmorEnabled = !superArmorEnabled;
-        [self applyCheats];
+    [alert addAction:[UIAlertAction actionWithTitle:superArmorEnabled ? @"✅ Super Armor" : @"Super Armor" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        superArmorEnabled = !superArmorEnabled; [self applyAllCheats];
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:damageNullifyEnabled ? @"✅ Damage Nullify (ON)" : @"Damage Nullify" 
-                                              style:UIAlertActionStyleDefault 
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        damageNullifyEnabled = !damageNullifyEnabled;
-        [self applyCheats];
+    [alert addAction:[UIAlertAction actionWithTitle:damageNullifyEnabled ? @"✅ Damage Nullify" : @"Damage Nullify" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        damageNullifyEnabled = !damageNullifyEnabled; [self applyAllCheats];
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:critEnabled ? @"✅ Critical 100% (ON)" : @"Critical 100%" 
-                                              style:UIAlertActionStyleDefault 
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        critEnabled = !critEnabled;
-        [self applyCheats];
+    [alert addAction:[UIAlertAction actionWithTitle:critEnabled ? @"✅ Critical 100%" : @"Critical 100%" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        critEnabled = !critEnabled; [self applyAllCheats];
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:cooldownEnabled ? @"✅ Cooldown Haste (ON)" : @"Cooldown Haste" 
-                                              style:UIAlertActionStyleDefault 
-                                            handler:^(UIAlertAction * _Nonnull action) {
-        cooldownEnabled = !cooldownEnabled;
-        [self applyCheats];
+    [alert addAction:[UIAlertAction actionWithTitle:cooldownEnabled ? @"✅ Cooldown Haste" : @"Cooldown Haste" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        cooldownEnabled = !cooldownEnabled; [self applyAllCheats];
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:@"Set Gold 99M" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:@"💰 Set Gold 99M" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         if (SetGold && playerDataInstance) SetGold(playerDataInstance, 99999999);
     }]];
 
-    [alert addAction:[UIAlertAction actionWithTitle:@"Set HP = 30" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    [alert addAction:[UIAlertAction actionWithTitle:@"❤️ Set HP = 30" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         if (SetMaxHP && playerDataInstance) SetMaxHP(playerDataInstance, 30, true, 0);
     }]];
 
     [alert addAction:[UIAlertAction actionWithTitle:@"Đóng" style:UIAlertActionStyleCancel handler:nil]];
 
-    UIViewController *topVC = [UIApplication sharedApplication].keyWindow.rootViewController;
-    [topVC presentViewController:alert animated:YES completion:nil];
+    UIViewController *rootVC = [self topViewController];
+    [rootVC presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)applyCheats {
+- (UIViewController *)topViewController {
+    UIViewController *topVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+    while (topVC.presentedViewController) {
+        topVC = topVC.presentedViewController;
+    }
+    return topVC;
+}
+
+- (void)applyAllCheats {
     if (!playerDataInstance) return;
     
     if (godModeEnabled && ApplyDamageReductionBuff) {
@@ -189,12 +186,11 @@ static BOOL cooldownEnabled = YES;
 
 @end
 
-// ====================== MAIN INIT ======================
+// ====================== MAIN ======================
 __attribute__((constructor))
 static void init_cheat() {
-    NSLog(@"[DSSlasherCheat] Dylib injected - Menu version");
+    NSLog(@"[DSSlasherCheat] Menu version loaded");
 
-    // Load IL2CPP
     void* il2cpp = dlopen("UnityFramework", RTLD_NOW);
     if (!il2cpp) il2cpp = dlopen("/System/Library/Frameworks/UnityFramework.framework/UnityFramework", RTLD_NOW);
 
@@ -205,23 +201,19 @@ static void init_cheat() {
     }
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        void* klass = il2cpp_get_class("", "PlayerData");
-        if (!klass) {
-            NSLog(@"[DSSlasherCheat] PlayerData not found!");
-            return;
-        }
+        void* klass = il2cpp_get_class ? il2cpp_get_class("", "PlayerData") : NULL;
+        if (!klass) return;
 
-        // Get Instance
         MethodInfo* m = (MethodInfo*)il2cpp_class_get_method_from_name(klass, "get_Instance", 0);
         if (m) PlayerData_get_Instance = (void*(*)())m->methodPointer;
 
         playerDataInstance = PlayerData_get_Instance ? PlayerData_get_Instance() : NULL;
         if (!playerDataInstance) return;
 
-        // Load methods...
+        // Load methods
         m = (MethodInfo*)il2cpp_class_get_method_from_name(klass, "SetGold", 1);
         if (m) SetGold = (void(*)(void*,int32_t))m->methodPointer;
-
+        
         m = (MethodInfo*)il2cpp_class_get_method_from_name(klass, "SetMaxHP", 3);
         if (m) SetMaxHP = (void(*)(void*,int32_t,bool,int32_t))m->methodPointer;
 
@@ -240,25 +232,8 @@ static void init_cheat() {
         m = (MethodInfo*)il2cpp_class_get_method_from_name(klass, "SetSkillCoolHasteSkill", 2);
         if (m) SetSkillCoolHasteSkill = (void(*)(void*,void*,int32_t))m->methodPointer;
 
-        // Khởi tạo Floating Button
-        [[FloatingCheatButton alloc] init];
-
-        NSLog(@"[DSSlasherCheat] ✅ Menu floating ready!");
-    });
-
-    // Gesture 3 ngón tay để hiện nút
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        UITapGestureRecognizer *tripleTap = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
-        tripleTap.numberOfTouchesRequired = 3;
-        tripleTap.numberOfTapsRequired = 1;
-        tripleTap.cancelsTouchesInView = NO;
-        
-        [[[UIApplication sharedApplication] keyWindow] addGestureRecognizer:tripleTap];
-        
-        // Vì target = nil, chúng ta override handler
-        [tripleTap setValue:^(UIGestureRecognizer *g) {
-            // Tìm và show button (cần cải tiến nếu có nhiều button)
-            NSLog(@"[DSSlasherCheat] 3-finger tap detected - Showing menu button");
-        } forKey:@"handler"];
+        // Khởi tạo menu
+        FloatingCheatButton *menu = [[FloatingCheatButton alloc] init];
+        NSLog(@"[DSSlasherCheat] Floating Menu initialized successfully!");
     });
 }
