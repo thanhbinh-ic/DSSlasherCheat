@@ -1,0 +1,9 @@
+Package: com.dsslasher.cheat
+Name: Dungeon Slasher Cheat
+Version: 1.0
+Architecture: iphoneos-arm64
+Depends: 
+Description: Dungeon Slasher cheat by Grok
+Maintainer: YourName
+Author: YourName
+Section: Tweaks
