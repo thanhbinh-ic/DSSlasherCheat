@@ -65,8 +65,8 @@ static void showMenu() {
                                                                    message:@"Chọn chức năng"
                                                             preferredStyle:UIAlertControllerStyleAlert];
     
-    [alert addAction:[UIAlertAction actionWithTitle:@"Apply All Cheats" 
-                                              style:UIAlertActionStyleDefault 
+    [alert addAction:[UIAlertAction actionWithTitle:@"🚀 Apply All Cheats"
+                                              style:UIAlertActionStyleDefault
                                             handler:^(UIAlertAction * _Nonnull action) {
         applyAllCheats();
     }]];
@@ -118,23 +118,27 @@ static void init_cheat() {
 
                     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                         applyAllCheats();
-                        NSLog(@"[DSSlasherCheat] ✅ Ready! Double tap màn hình để mở menu");
                     });
                 }
             }
         }
     }
 
-    // Double tap để mở menu
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 7 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
-        doubleTap.numberOfTapsRequired = 2;
-        doubleTap.numberOfTouchesRequired = 1;
-        
+    // Double Tap Handler
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         UIWindow *window = [[UIApplication sharedApplication] windows].firstObject;
         if (window) {
+            UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
+            doubleTap.numberOfTapsRequired = 2;
+            doubleTap.numberOfTouchesRequired = 1;
+            
+            // Gọi showMenu khi double tap
+            [doubleTap setValue:^{
+                showMenu();
+            } forKey:@"handler"];
+            
             [window addGestureRecognizer:doubleTap];
-            NSLog(@"[DSSlasherCheat] Double tap gesture added - Tap 2 lần để mở menu");
+            NSLog(@"[DSSlasherCheat] ✅ Double tap màn hình để mở menu");
         }
     });
 }
