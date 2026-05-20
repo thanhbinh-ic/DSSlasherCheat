@@ -6,12 +6,12 @@
     <dict>
         <key>Executable</key>
         <array>
+            <string>dungeonslasher</string>
             <string>UnityFramework</string>
-            <string>YourAppName</string>   <!-- Thay bằng tên executable của game nếu biết -->
         </array>
         <key>Bundles</key>
         <array>
-            <string>com.unityframework</string>
+            <string>com.nspgames.dungeonslasher</string>
         </array>
     </dict>
 </dict>
