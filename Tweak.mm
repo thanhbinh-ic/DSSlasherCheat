@@ -10,7 +10,7 @@ typedef struct MethodInfo {
     void* methodPointer;
 } MethodInfo;
 
-// ====================== POINTERS ======================
+// ====================== IL2CPP POINTERS ======================
 static void* (*PlayerData_get_Instance)() = NULL;
 static void (*SetGold)(void* instance, int32_t gold) = NULL;
 static void (*SetMaxHP)(void* instance, int32_t hp, bool heal, int32_t type) = NULL;
@@ -26,11 +26,11 @@ static il2cpp_string_new_t il2cpp_string_new = NULL;
 // ====================== APPLY CHEATS ======================
 static void applyAllCheats() {
     if (!playerDataInstance) {
-        NSLog(@"[DSSlasherCheat] PlayerData instance not found!");
+        NSLog(@"[DSSlasherCheat] ❌ PlayerData instance not found");
         return;
     }
 
-    NSLog(@"[DSSlasherCheat] Applying cheats...");
+    NSLog(@"[DSSlasherCheat] Applying all cheats...");
 
     if (SetGold) SetGold(playerDataInstance, 99999999);
     if (SetMaxHP) SetMaxHP(playerDataInstance, 30, true, 0);
@@ -56,10 +56,10 @@ static void applyAllCheats() {
         SetSkillCoolHasteSkill(playerDataInstance, str, 100);
     }
 
-    NSLog(@"[DSSlasherCheat] All cheats applied successfully!");
+    NSLog(@"[DSSlasherCheat] ✅ All cheats applied!");
 }
 
-// ====================== SIMPLE MENU ======================
+// ====================== SHOW MENU ======================
 static void showMenu() {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Dungeon Slasher Cheat"
                                                                    message:@"Chọn chức năng"
@@ -71,11 +71,20 @@ static void showMenu() {
         applyAllCheats();
     }]];
     
-    [alert addAction:[UIAlertAction actionWithTitle:@"Đóng" 
-                                              style:UIAlertActionStyleCancel 
-                                            handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Đóng" style:UIAlertActionStyleCancel handler:nil]];
     
-    [[UIApplication sharedApplication].keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+    // Get root view controller an toàn
+    UIViewController *rootVC = nil;
+    UIWindow *window = [[UIApplication sharedApplication] windows].firstObject;
+    if (window) rootVC = window.rootViewController;
+    
+    while (rootVC.presentedViewController) {
+        rootVC = rootVC.presentedViewController;
+    }
+    
+    if (rootVC) {
+        [rootVC presentViewController:alert animated:YES completion:nil];
+    }
 }
 
 // ====================== INIT ======================
@@ -100,7 +109,6 @@ static void init_cheat() {
                 playerDataInstance = PlayerData_get_Instance ? PlayerData_get_Instance() : NULL;
 
                 if (playerDataInstance) {
-                    // Load methods
                     m = (MethodInfo*)getMethod(klass, "SetGold", 1); if (m) SetGold = (void(*)(void*,int32_t))m->methodPointer;
                     m = (MethodInfo*)getMethod(klass, "SetMaxHP", 3); if (m) SetMaxHP = (void(*)(void*,int32_t,bool,int32_t))m->methodPointer;
                     m = (MethodInfo*)getMethod(klass, "ApplyDamageReductionBuff", 5); if (m) ApplyDamageReductionBuff = (void(*)(void*,void*,float,float,int32_t,bool))m->methodPointer;
@@ -111,20 +119,22 @@ static void init_cheat() {
 
                     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                         applyAllCheats();
-                        NSLog(@"[DSSlasherCheat] Double tap màn hình để mở menu");
+                        NSLog(@"[DSSlasherCheat] ✅ Ready! Double tap màn hình để mở menu");
                     });
                 }
             }
         }
     }
 
-    // Double tap để mở menu
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    // Double tap gesture
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 7 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
         doubleTap.numberOfTapsRequired = 2;
-        [[UIApplication sharedApplication].keyWindow addGestureRecognizer:doubleTap];
+        doubleTap.numberOfTouchesRequired = 1;
         
-        // Simple handler
+        UIWindow *window = [[UIApplication sharedApplication] windows].firstObject;
+        if (window) [window addGestureRecognizer:doubleTap];
+        
         NSLog(@"[DSSlasherCheat] Double tap gesture added");
     });
 }
