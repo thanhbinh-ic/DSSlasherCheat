@@ -1,0 +1,29 @@
+name: Build Theos Tweak
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Theos
+        uses: Randomblock1/theos-action@v1
+        with:
+          sdk: 'https://github.com/theos/sdks/releases/download/2025.1/iPhoneOS.sdk.tar.xz'
+
+      - name: Build Tweak
+        run: |
+          make package FINALPACKAGE=1
+
+      - name: Upload dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSSlasherCheat
+          path: |
+            packages/*.deb
+            .theos/_/usr/lib/DSSlasherCheat.dylib
